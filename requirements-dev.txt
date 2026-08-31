@@ -1,0 +1,7 @@
+-r requirements.txt
+
+# Для запуска тестов
+pytest>=7.0.0
+
+# Для сборки автономного .exe (см. README, раздел "Сборка .exe")
+pyinstaller>=6.0.0

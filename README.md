@@ -62,20 +62,41 @@ replace_first_page(
 ## Тесты
 
 ```bash
-pip install pytest
+pip install -r requirements-dev.txt
 pytest
 ```
+
+## Сборка .exe (Windows)
+
+Приложение можно собрать в один самостоятельный `.exe`, который запускается
+без установленного Python — удобно раздавать другим людям.
+
+```bash
+pip install -r requirements-dev.txt
+pyinstaller PdfMaker.spec
+```
+
+Готовый файл появится в `dist/PdfMaker.exe`. Это GUI-приложение — консольное
+окно при запуске не открывается. Папки `build/` и `dist/` создаются локально
+и не хранятся в git (см. `.gitignore`) — при необходимости просто соберите
+`.exe` заново командой выше.
+
+Если нужно поменять настройки сборки (например, добавить иконку), правьте
+`PdfMaker.spec` и пересобирайте той же командой — так сборка остаётся
+воспроизводимой и не требует запоминать флаги `pyinstaller`.
 
 ## Структура проекта
 
 ```
 pdf-maker/
-├── main.py            # точка входа: запуск GUI
+├── main.py               # точка входа: запуск GUI
+├── PdfMaker.spec         # конфигурация сборки .exe (PyInstaller)
 ├── pdf_maker/
-│   ├── core.py         # логика замены страницы (без GUI)
-│   ├── gui.py           # окно на Tkinter
-│   └── config.py        # запоминание папки сохранения между запусками
+│   ├── core.py            # логика замены страницы (без GUI)
+│   ├── gui.py             # окно на Tkinter
+│   └── config.py          # запоминание папки сохранения между запусками
 ├── tests/
-│   └── test_core.py    # unit-тесты
-└── requirements.txt
+│   └── test_core.py       # unit-тесты
+├── requirements.txt       # зависимости для запуска приложения
+└── requirements-dev.txt   # + зависимости для тестов и сборки .exe
 ```
