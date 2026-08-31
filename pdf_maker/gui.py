@@ -27,8 +27,6 @@ class PdfMakerApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("PDF Maker — замена первого листа")
-        self.geometry("640x560")
-        self.minsize(600, 540)
         self.configure(bg=BG)
 
         self.source_path = tk.StringVar()
@@ -40,7 +38,7 @@ class PdfMakerApp(tk.Tk):
 
         self._setup_style()
         self._build_ui()
-        self._center_window()
+        self._fit_and_center_window()
 
     # -- стиль ---------------------------------------------------------
     def _setup_style(self) -> None:
@@ -100,12 +98,20 @@ class PdfMakerApp(tk.Tk):
             font=("Segoe UI", 10, "bold"),
         )
 
-    def _center_window(self) -> None:
+    def _fit_and_center_window(self) -> None:
+        """Подгоняет размер окна под реальное содержимое (с запасом) и центрирует его.
+
+        Фиксированный размер окна ломался на разных DPI/масштабах экрана —
+        низ окна обрезался. Вместо этого меряем требуемый размер после
+        построения интерфейса и берём его с запасом.
+        """
         self.update_idletasks()
-        width, height = self.winfo_width(), self.winfo_height()
+        width = max(self.winfo_reqwidth() + 20, 640)
+        height = self.winfo_reqheight() + 30
+        self.minsize(width, height)
         x = (self.winfo_screenwidth() - width) // 2
         y = (self.winfo_screenheight() - height) // 3
-        self.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        self.geometry(f"{width}x{height}+{max(x, 0)}+{max(y, 0)}")
 
     # -- построение интерфейса ------------------------------------------
     def _build_ui(self) -> None:
