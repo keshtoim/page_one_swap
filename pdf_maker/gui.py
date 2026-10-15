@@ -37,6 +37,7 @@ class PdfMakerApp(tk.Tk):
         self._last_output_path: Optional[Path] = None
 
         self._setup_style()
+        self._setup_clipboard()
         self._build_ui()
         self._fit_and_center_window()
 
@@ -97,6 +98,36 @@ class PdfMakerApp(tk.Tk):
             foreground=TEXT_DARK,
             font=("Segoe UI", 10, "bold"),
         )
+
+    def _setup_clipboard(self) -> None:
+        """Ctrl+C/X/V при любой раскладке и контекстное меню во всех полях ввода.
+
+        Штатные биндинги Tk завязаны на keysym, а при русской раскладке
+        вместо «v» приходит «Cyrillic_em» — вставка молча не работает.
+        Поэтому дополнительно ловим физическую клавишу по keycode.
+        """
+        keycode_events = {86: "<<Paste>>", 67: "<<Copy>>", 88: "<<Cut>>"}  # V, C, X
+
+        def on_ctrl_key(event: tk.Event) -> Optional[str]:
+            virtual = keycode_events.get(event.keycode)
+            # латинскую раскладку уже обработал штатный биндинг Tk
+            if virtual and event.keysym.lower() not in ("v", "c", "x"):
+                event.widget.event_generate(virtual)
+                return "break"
+            return None
+
+        self._entry_menu = tk.Menu(self, tearoff=False)
+        for label, virtual in (("Вырезать", "<<Cut>>"), ("Копировать", "<<Copy>>"), ("Вставить", "<<Paste>>")):
+            self._entry_menu.add_command(
+                label=label, command=lambda v=virtual: self.focus_get().event_generate(v)
+            )
+
+        def show_menu(event: tk.Event) -> None:
+            event.widget.focus_set()
+            self._entry_menu.tk_popup(event.x_root, event.y_root)
+
+        self.bind_class("TEntry", "<Control-KeyPress>", on_ctrl_key, add="+")
+        self.bind_class("TEntry", "<Button-3>", show_menu, add="+")
 
     def _fit_and_center_window(self) -> None:
         """Подгоняет размер окна под реальное содержимое (с запасом) и центрирует его.
