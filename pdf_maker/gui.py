@@ -3,7 +3,9 @@ import os
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
-from typing import Optional
+from typing import Callable, Optional
+
+from tkinterdnd2 import COPY, DND_FILES, TkinterDnD
 
 from pdf_maker.config import load_output_folder, save_output_folder
 from pdf_maker.core import PdfReplaceError, replace_first_page
@@ -17,11 +19,15 @@ TEXT_MUTED = "#6b7280"
 ACCENT = "#3b6fed"
 ACCENT_DARK = "#2c56c4"
 ACCENT_DISABLED = "#aebdf0"
+DROP_BG = "#f8f9fd"
+DROP_BG_ACTIVE = "#eef3fe"
 SUCCESS = "#1a7f37"
 ERROR = "#c62828"
 
+DROP_HINT = "⤓  Перетащите PDF сюда или нажмите, чтобы выбрать"
 
-class PdfMakerApp(tk.Tk):
+
+class PdfMakerApp(TkinterDnD.Tk):
     """Главное окно приложения."""
 
     def __init__(self) -> None:
@@ -202,6 +208,63 @@ class PdfMakerApp(tk.Tk):
         entry = ttk.Entry(inner, textvariable=var)
         entry.grid(row=0, column=0, sticky="we", padx=(0, 8))
         ttk.Button(inner, text="Обзор…", command=browse_command).grid(row=0, column=1)
+
+        # ttk-стили не умеют менять рамку на лету, поэтому зона — обычный tk.Label
+        drop_zone = tk.Label(
+            row,
+            text=DROP_HINT,
+            bg=DROP_BG,
+            fg=TEXT_MUTED,
+            font=("Segoe UI", 9),
+            pady=12,
+            cursor="hand2",
+            highlightthickness=1,
+            highlightbackground=BORDER,
+        )
+        drop_zone.pack(fill="x", pady=(8, 0))
+        drop_zone.bind("<Button-1>", lambda _e: browse_command())
+
+        for widget in (entry, drop_zone):
+            self._register_drop_target(widget, var, drop_zone)
+
+    def _register_drop_target(self, widget: tk.Widget, var: tk.StringVar, drop_zone: tk.Label) -> None:
+        def highlight(active: bool) -> None:
+            drop_zone.configure(
+                bg=DROP_BG_ACTIVE if active else DROP_BG,
+                fg=ACCENT if active else TEXT_MUTED,
+                highlightbackground=ACCENT if active else BORDER,
+                text="Отпустите, чтобы выбрать файл" if active else DROP_HINT,
+            )
+
+        def on_enter(event) -> str:
+            highlight(True)
+            return event.action
+
+        def on_leave(_event) -> None:
+            highlight(False)
+
+        def on_drop(event) -> str:
+            highlight(False)
+            self._accept_dropped_file(event.data, var.set)
+            return COPY
+
+        widget.drop_target_register(DND_FILES)
+        widget.dnd_bind("<<DropEnter>>", on_enter)
+        widget.dnd_bind("<<DropLeave>>", on_leave)
+        widget.dnd_bind("<<Drop>>", on_drop)
+
+    def _accept_dropped_file(self, data: str, set_path: Callable[[str], None]) -> None:
+        # пути с пробелами приходят в фигурных скобках — splitlist их разбирает
+        paths = self.tk.splitlist(data)
+        pdfs = [p for p in paths if p.lower().endswith(".pdf")]
+        if not pdfs:
+            self._set_status("Перетащите файл в формате PDF.", ERROR)
+            return
+        set_path(pdfs[0])
+        if len(paths) > 1:
+            self._set_status(f"Перетащено несколько файлов — взят «{Path(pdfs[0]).name}».")
+        else:
+            self._set_status(f"Выбран файл «{Path(pdfs[0]).name}».")
 
     def _build_save_section(self, card: ttk.LabelFrame) -> None:
         folder_row = ttk.Frame(card, style="Card.TFrame")
