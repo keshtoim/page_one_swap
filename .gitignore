@@ -26,3 +26,6 @@ Thumbs.db
 # Артефакты сборки PyInstaller (сам .exe не хранится в git — собирается локально)
 /build/
 /dist/
+
+# Локальные инструкции для Claude Code
+CLAUDE.md
